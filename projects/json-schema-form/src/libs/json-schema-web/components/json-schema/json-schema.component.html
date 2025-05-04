@@ -1,0 +1,59 @@
+<div class="schema-controls">
+    <app-select class="schema-controls__type" [icon]="typeIconTemplate" [options]="options"
+        [formControl]="form().controls.type" (valueChange)="handleTypeChanged($event)" label="Type"></app-select>
+    <app-input class="schema-controls__title" [control]="form().controls.title" label="Title"></app-input>
+    <app-input class="schema-controls__description" [control]="form().controls.description"
+        label="Description"></app-input>
+
+
+    <ng-template #typeIconTemplate let-value>
+        <span class="type-icon" *ngIf="value === 'string'">“”</span>
+        <span class="type-icon" *ngIf="value === 'number'">#</span>
+        <span class="type-icon" *ngIf="value === 'boolean'">01</span>
+        <span class="type-icon" *ngIf="value === 'array'">[]</span>
+        <span class="type-icon" *ngIf="value === 'object'">&#123;&#125;</span>
+        <span class="type-icon-placeholder"></span>
+    </ng-template>
+
+    <div class="schema-controls__end">
+        <ng-content select="header-end"></ng-content>
+    </div>
+    <div class="schema-controls__after">
+        <ng-content select="after-header"></ng-content>
+    </div>
+</div>
+
+<div class="schema-properties" *ngIf="form().controls.properties as propertiesArrayForm">
+    <ng-container *ngFor="let propertyForm of propertiesArrayForm.controls">
+        <div class="nester">
+            <app-branch></app-branch>
+            <app-json-schema [form]="propertyForm.controls.value">
+                <ng-container ngProjectAs="header-end">
+                    <button type="button" mat-fab aria-label="Delete property" (click)="deleteProperty(propertyForm)">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+                </ng-container>
+
+                <div class="property-controls" ngProjectAs="after-header">
+                    <mat-checkbox [formControl]="propertyForm.controls.required">Required</mat-checkbox>
+                    <app-input [control]="propertyForm.controls.key" label="Key" placeholder="Property key"></app-input>
+                </div>
+            </app-json-schema>
+        </div>
+    </ng-container>
+
+    <div class="nester add-property-btn">
+        <app-branch></app-branch>
+        <button type="button" mat-fab extended aria-label="Add property" (click)="addProperty()">
+            <mat-icon>add</mat-icon>
+            Add
+        </button>
+    </div>
+</div>
+
+<div class="schema-items" *ngIf="form().controls.items as itemsForm">
+    <div class="nester">
+        <app-branch></app-branch>
+        <app-json-schema [form]="itemsForm"></app-json-schema>
+    </div>
+</div>

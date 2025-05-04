@@ -13,5 +13,5 @@ export const JsonType = {
     integer: 'integer',
 } as const;
 
-export type TypeofAllJsonTypes = (typeof JsonType)[keyof (typeof JsonType)];
-export type TypeofBaseJsonTypes = Exclude<TypeofAllJsonTypes, 'null' | 'integer'>
+export type AllJsonTypes = (typeof JsonType)[keyof (typeof JsonType)];
+export type CommonJsonTypes = Exclude<AllJsonTypes, 'null' | 'integer'>

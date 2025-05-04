@@ -1,0 +1,6 @@
+<input #inputRef [value]="searchQuery()" (focus)="handleFieldFocus()" (blur)="handleFieldBlur()"
+    (input)="handleFieldInput()" [disabled]="isDisabled()" (keypress)="handleFieldKeyPress($event)"
+    (pointerdown)="handleFieldPointerdown()" />
+<app-select-popup *ngIf="popupShown()">
+    <ng-content></ng-content>
+</app-select-popup>

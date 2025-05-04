@@ -1,0 +1,25 @@
+.branch {
+    width: 100%;
+    height: 100%;
+
+    position: relative;
+}
+
+.inlet {
+    position: absolute;
+    width: 50%;
+    height: 2px;
+    top: calc(50% - 1px);
+    right: 0;
+    background: grey;
+
+    &::before {
+        content: "";
+        position: absolute;
+        width: 2px;
+        height: 4px;
+        left: 0;
+        top: calc(50% - 4px);
+        background: grey;
+    }
+}
