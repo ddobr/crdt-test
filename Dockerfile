@@ -11,7 +11,7 @@ RUN npm run build
 FROM nginx:alpine
 
 COPY ./nginx.conf /etc/nginx/nginx.conf
-COPY --from=build /app/dist/json-schema-form/browser /usr/share/nginx/html
+COPY --from=build /app/dist/json-schema-form /usr/share/nginx/html
 
 EXPOSE 80
 
