@@ -50,7 +50,6 @@ export class AppSelectComponent<T> implements ControlValueAccessor {
 
     /** @inheritdoc */
     public writeValue(obj: T): void {
-        this.valueChange.emit(obj ?? null);
         this.value.set(obj ?? null);
     }
     /** @inheritdoc */

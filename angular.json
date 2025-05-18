@@ -15,13 +15,13 @@
             "prefix": "app",
             "architect": {
                 "build": {
-                    "builder": "@angular-devkit/build-angular:application",
+                    "builder": "@angular-devkit/build-angular:browser",
                     "options": {
                         "outputPath": "dist/json-schema-form",
                         "index": "projects/json-schema-form/src/index.html",
-                        "browser": "projects/json-schema-form/src/main.ts",
                         "tsConfig": "projects/json-schema-form/tsconfig.app.json",
                         "inlineStyleLanguage": "scss",
+                        "main": "./projects/json-schema-form/src/main.ts",
                         "assets": [
                             {
                                 "glob": "**/*",

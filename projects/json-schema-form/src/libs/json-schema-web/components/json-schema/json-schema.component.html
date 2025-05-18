@@ -1,9 +1,9 @@
 <div class="schema-controls">
     <app-select class="schema-controls__type" [icon]="typeIconTemplate" [options]="options"
         [formControl]="form().controls.type" (valueChange)="handleTypeChanged($event)" label="Type"></app-select>
-    <app-input class="schema-controls__title" [control]="form().controls.title" label="Title"></app-input>
+    <app-input class="schema-controls__title" [control]="form().controls.title" placeholder="Title"></app-input>
     <app-input class="schema-controls__description" [control]="form().controls.description"
-        label="Description"></app-input>
+        placeholder="Description"></app-input>
 
 
     <ng-template #typeIconTemplate let-value>
@@ -23,8 +23,8 @@
     </div>
 </div>
 
-<div class="schema-properties" *ngIf="form().controls.properties as propertiesArrayForm">
-    <ng-container *ngFor="let propertyForm of propertiesArrayForm.controls">
+<div class="schema-properties" *ngIf="properties | async as propertiesList">
+    <ng-container *ngFor="let propertyForm of propertiesList">
         <div class="nester">
             <app-branch></app-branch>
             <app-json-schema [form]="propertyForm.controls.value">
@@ -36,7 +36,7 @@
 
                 <div class="property-controls" ngProjectAs="after-header">
                     <mat-checkbox [formControl]="propertyForm.controls.required">Required</mat-checkbox>
-                    <app-input [control]="propertyForm.controls.key" label="Key" placeholder="Property key"></app-input>
+                    <app-input [control]="propertyForm.controls.key" placeholder="Property key"></app-input>
                 </div>
             </app-json-schema>
         </div>

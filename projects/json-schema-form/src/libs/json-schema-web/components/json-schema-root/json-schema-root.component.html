@@ -1,4 +1,5 @@
 <form>
+    <mat-checkbox (change)="staySynced.set($event.checked)" [checked]="staySynced()">Stay synced</mat-checkbox>
     <app-json-schema [form]="formRoot"></app-json-schema>
 
 </form>

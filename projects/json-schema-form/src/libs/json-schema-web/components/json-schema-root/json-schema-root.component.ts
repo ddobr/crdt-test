@@ -1,81 +1,100 @@
-import { ChangeDetectionStrategy, Component, inject } from "@angular/core";
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal } from "@angular/core";
 import { JsonSchemaComponent } from "../json-schema/json-schema.component";
 import { JsonSchemaFormControllerService } from "../../services/json-schema-form-controller.service";
-import { VALIDATION_MSG_PROVIDER } from "validation";
-import { ValidationErrors } from "@angular/forms";
-import { Repo, DocHandle, isValidAutomergeUrl } from '@automerge/automerge-repo';
-import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket';
-import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
-import { BroadcastChannelNetworkAdapter } from '@automerge/automerge-repo-network-broadcastchannel'
-import { RootFormValue } from "../../types/json-schema-form.type";
+import { IStoredJsonSchema, JsonSchemaCrdtService } from "json-schema-common";
+import { filter, tap } from "rxjs";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { FormValueParser } from "../../utils/form-value-parser.util";
+import * as Automerge from "@automerge/automerge";
+import { MatCheckboxModule } from "@angular/material/checkbox";
+import { FormControl, FormsModule } from "@angular/forms";
 
 @Component({
     standalone: true,
     selector: 'app-json-schema-root',
     providers: [
         JsonSchemaFormControllerService,
-        {
-            provide: VALIDATION_MSG_PROVIDER,
-            useValue: (errors: ValidationErrors): string | null => {
-                if (errors["required"]) {
-                    return 'This field is required';
-                }
-
-                if (errors["jsonPath"]) {
-                    return 'This field can consist of: A-Z, a-z, 0-9 and _'
-                }
-
-                if (errors["jsonPathUnique"]) {
-                    return 'This field must be unique';
-                }
-
-                return null;
-            }
-        }
+        JsonSchemaCrdtService,
     ],
     imports: [
+        FormsModule,
         JsonSchemaComponent,
+        MatCheckboxModule
     ],
     templateUrl: './json-schema-root.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class JsonSchemaRootComponent {
-    public readonly formRoot = inject(JsonSchemaFormControllerService).createRoot();
+    public readonly controller = inject(JsonSchemaFormControllerService);
+    public readonly formRoot = this.controller.createRoot();
 
-    private _handle!: DocHandle<RootFormValue>;
+    public readonly staySynced = signal(true);
+
+    private readonly _crdtService = inject(JsonSchemaCrdtService);
+    private readonly _destroyRef = inject(DestroyRef);
 
     constructor() {
-        const repo = new Repo({
-            network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org"), new BroadcastChannelNetworkAdapter()],
-            storage: new IndexedDBStorageAdapter(),
+        const formValueParser = new FormValueParser();
+
+
+        this._crdtService.syncEvent.pipe(
+            // filter(() => this.staySynced()),
+            tap(doc => {
+                const formValue = formValueParser.getFormValue(doc);
+                this.controller.setValue(this.formRoot, formValue)
+            }),
+            takeUntilDestroyed(this._destroyRef),
+        ).subscribe();
+
+        this.formRoot.valueChanges.pipe(
+            // filter(() => this.staySynced()),
+            tap(formValue => {
+                const storedValue = formValueParser.getStoredValue(formValue);
+                this._crdtService.change((doc) => Object.assign(doc, storedValue));
+            }),
+            takeUntilDestroyed(this._destroyRef),
+        ).subscribe();
+
+        // this.test();
+        const rootDocUrl = document.location.hash.substring(1);
+        document.location.hash = this._crdtService.initialize(rootDocUrl);
+
+        effect(() => {
+            if (this.staySynced()) {
+                this._crdtService._networkAdapter.connect(this._crdtService._networkAdapter.peerId!);
+            } else {
+                this._crdtService._networkAdapter.disconnect();
+            }
         })
+    }
 
-        const rootDocUrl = document.location.hash.substring(1)
+    public test(): void {
+        let doc = Automerge.from<any>({
+            title: '',
+            description: ''
+        });
+        let doc1 = Automerge.change(Automerge.clone(doc), (m) => {
+            // m.properties.push({
+            //     title: 'hey'
+            // });
+            Object.assign(m, {
+                title: 'hello',
+                description: ''
+            });
 
-        if (isValidAutomergeUrl(rootDocUrl)) {
-            this._handle = repo.find(rootDocUrl)
-        } else {
-            this._handle = repo.create<RootFormValue>({});
-        }
-
-        document.location.hash = this._handle.url;
-
-        // Wait until synced or loaded
-        this._handle.doc().then(doc => {
-            this.formRoot.patchValue(doc ?? {}, { emitEvent: false });
         });
 
-        // Sync: Form → Automerge
-        this.formRoot.valueChanges.subscribe(value => {
-            this._handle.change(d => {
-                Object.assign(d, value);
+        let doc2 = Automerge.change(Automerge.clone(doc), (m) => {
+            // m.properties.push({
+            //     title: 'hey2'
+            // });
+            // Object.assign(m, { properties: [{ title: 'hey2' }] });
+            Object.assign(m, {
+                title: '',
+                description: 'world'
             });
         });
 
-        // Sync: Automerge → Form (reactively)
-        this._handle.on('change', event => {
-            this.formRoot.patchValue(event.doc ?? {}, { emitEvent: false });
-        });
-
+        console.log(Automerge.merge(doc1, doc2));
     }
 }

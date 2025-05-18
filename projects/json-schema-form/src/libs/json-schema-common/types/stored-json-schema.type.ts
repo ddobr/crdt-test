@@ -1,18 +1,26 @@
 import { CommonJsonTypes } from "./json-type.type";
 
+/** Схема */
 export interface IStoredJsonSchema {
+    /** Тип схемы */
     type: CommonJsonTypes,
-
+    /** Название схемы */
     title?: string,
+    /** Описание схемы */
     description?: string,
+    /** Обязательные дочерние поля. Для объекта */
     required?: string[]
-
-    /** type === JsonType.array */
+    /** Схема элемента массива. Для массива */
     items?: IStoredJsonSchema;
-    /** type === JsonType.object */
+    /**
+     * Дочерние поля. Для объекта
+     *
+     * Массив кортежей { ключ, схемаПоля }
+     */
     properties?: IKeyed<IStoredJsonSchema>[];
 }
 
+/** Кортеж */
 export interface IKeyed<T> {
     key: string,
     value: T

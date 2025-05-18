@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, Signal } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { AppSelectComponent, IOption } from 'select';
-import { CommonJsonTypes } from 'json-schema-common';
+import { CommonJsonTypes, JsonSchemaCrdtService } from 'json-schema-common';
 import { JsonSchemaForm, JsonSchemaPropertyForm } from '../../types/json-schema-form.type';
 import { JsonSchemaFormControllerService } from '../../services/json-schema-form-controller.service';
 import { AppInputComponent } from 'input';
@@ -10,6 +10,8 @@ import { BranchComponent } from '../branch/branch.component';
 import { MatIcon } from '@angular/material/icon';
 import { MatFabButton } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { map, Observable, switchMap } from 'rxjs';
 
 
 @Component({
@@ -30,17 +32,25 @@ import { MatCheckbox } from '@angular/material/checkbox';
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class JsonSchemaComponent {
+
     public readonly form = input.required<JsonSchemaForm>();
     public readonly options: IOption<CommonJsonTypes>[];
+    public readonly properties: Observable<JsonSchemaPropertyForm[] | undefined>;
 
     protected readonly formController = inject(JsonSchemaFormControllerService);
+    protected readonly crdtService = inject(JsonSchemaCrdtService);
 
     constructor() {
         this.options = this.formController.typeOptions;
+        this.properties = this.crdtService.syncEvent.pipe(
+            map(() => {
+                return this.form()?.controls.properties?.controls
+            })
+        );
     }
 
     public deleteProperty(property: JsonSchemaPropertyForm): void {
-        this.formController.removeProperty(this.form(), property)
+        this.formController.removeProperty(this.form(), property, true);
     }
 
     public addProperty(): void {
