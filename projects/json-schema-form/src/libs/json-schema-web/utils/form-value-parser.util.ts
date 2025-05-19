@@ -25,9 +25,11 @@ export class FormValueParser {
 
         if (title !== null) formValue.title = title;
         if (description !== null) formValue.description = description;
-        if (items) formValue.items = this.fromFormValue(items);
+        if (items && storedValue.type === 'array') {
+            formValue.items = this.fromStoredValue(items);
+        }
 
-        if (properties) {
+        if (properties && storedValue.type === 'object') {
             formValue.properties = properties
                 .filter((property): property is Guarantee<typeof property, 'key' | 'value'> => {
                     return !!property.key && !!property.value
@@ -35,7 +37,7 @@ export class FormValueParser {
                 .map(property => {
                     return {
                         key: property.key,
-                        value: this.fromFormValue(property.value ?? {}),
+                        value: this.fromStoredValue(property.value ?? {}),
                         required: required?.includes(property.key) ?? false,
                     }
                 })
@@ -54,7 +56,11 @@ export class FormValueParser {
 
         schema.title = title ?? '';
         schema.description = description ?? '';
-        if (items && items.type) schema.items = this.fromFormValue(items)
+        if (items && items.type) {
+            schema.items = this.fromFormValue(items);
+        } else {
+            schema.items = null;
+        }
 
         if (properties) {
             const requiredSet = new Set<string>();
@@ -73,6 +79,8 @@ export class FormValueParser {
                 })
 
             schema.required = Array.from(requiredSet);
+        } else {
+            schema.properties = null;
         }
 
         return schema;

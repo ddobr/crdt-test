@@ -23,8 +23,8 @@
     </div>
 </div>
 
-<div class="schema-properties" *ngIf="properties | async as propertiesList">
-    <ng-container *ngFor="let propertyForm of propertiesList">
+<div class="schema-properties" *ngIf="showProperties()">
+    <ng-container *ngFor="let propertyForm of form().controls.properties?.controls ?? []">
         <div class="nester">
             <app-branch></app-branch>
             <app-json-schema [form]="propertyForm.controls.value">
@@ -51,9 +51,9 @@
     </div>
 </div>
 
-<div class="schema-items" *ngIf="form().controls.items as itemsForm">
+<div class="schema-items" *ngIf="showItems()">
     <div class="nester">
         <app-branch></app-branch>
-        <app-json-schema [form]="itemsForm"></app-json-schema>
+        <app-json-schema *ngIf="form().controls.items as items" [form]="items"></app-json-schema>
     </div>
 </div>

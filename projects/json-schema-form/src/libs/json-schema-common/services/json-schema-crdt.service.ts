@@ -1,8 +1,9 @@
 import { ChangeFn, Doc, DocHandle, DocHandleChangePayload, Repo, isValidAutomergeUrl } from "@automerge/automerge-repo";
-import { BroadcastChannelNetworkAdapter } from "@automerge/automerge-repo-network-broadcastchannel";
+// import { BroadcastChannelNetworkAdapter } from "@automerge/automerge-repo-network-broadcastchannel";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
 import { Observable, ReplaySubject } from "rxjs";
 import { IStoredJsonSchema } from "../types/stored-json-schema.type";
+import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket';
 
 
 export class JsonSchemaCrdtService {
@@ -11,18 +12,17 @@ export class JsonSchemaCrdtService {
 
     private readonly _repo: Repo;
     private readonly _syncEvent = new ReplaySubject<IStoredJsonSchema>(1);
-    public readonly _networkAdapter: BroadcastChannelNetworkAdapter;
+    // public readonly _networkAdapter = new BroadcastChannelNetworkAdapter()
 
     private _handle?: DocHandle<IStoredJsonSchema>;
 
     constructor() {
         this.syncEvent = this._syncEvent.asObservable();
 
-        this._networkAdapter = new BroadcastChannelNetworkAdapter()
         this._repo = new Repo({
             network: [
-                // new BrowserWebSocketClientAdapter("wss://sync.automerge.org"),
-                this._networkAdapter,
+                new BrowserWebSocketClientAdapter("wss://sync.automerge.org"),
+                // this._networkAdapter,
             ],
             storage: new IndexedDBStorageAdapter(),
         });
@@ -47,7 +47,6 @@ export class JsonSchemaCrdtService {
 
         this._handle.doc().then(this.handleLoad);
         this._handle.on('change', this.handleChange);
-        // this._handle.delete
 
         return this._handle.url;
     }

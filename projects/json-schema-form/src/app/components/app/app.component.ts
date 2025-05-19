@@ -3,10 +3,12 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { ValidationErrors } from '@angular/forms';
 import { JsonSchemaRootComponent } from 'json-schema-web';
 import { VALIDATION_MSG_PROVIDER } from 'validation';
+import { LoggingService } from 'json-schema-common';
 
 @Component({
     selector: 'app-root',
     providers: [
+        LoggingService,
         {
             provide: VALIDATION_MSG_PROVIDER,
             useValue: (errors: ValidationErrors): string | null => {

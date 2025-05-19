@@ -1,10 +1,12 @@
 import { FormArray, FormControl, FormGroup, Validators } from "@angular/forms";
-import { CommonJsonTypes } from "json-schema-common";
+import { CommonJsonTypes, LoggingService } from "json-schema-common";
 import { JsonSchemaForm, JsonSchemaPropertyForm, RootFormValue } from "../types/json-schema-form.type";
 import { IOption } from "select";
 import { JsonPathValidator } from "../validators/json-path.validator";
 import { JsonPathUniqueValidator } from "../validators/json-path-unique.validator";
+import { inject, Injectable } from "@angular/core";
 
+@Injectable()
 export class JsonSchemaFormControllerService {
 
     public readonly typeOptions: IOption<CommonJsonTypes>[] = [
@@ -15,6 +17,8 @@ export class JsonSchemaFormControllerService {
         { title: 'array', value: 'array' },
         { title: 'object', value: 'object' },
     ];
+
+    private readonly _logger = inject(LoggingService);
 
     public createRoot(): JsonSchemaForm {
         return new FormGroup({
@@ -34,25 +38,27 @@ export class JsonSchemaFormControllerService {
     }
 
     public setValue(root: JsonSchemaForm, value: RootFormValue, emitEvent = false): void {
-        console.log('setValue', root, value);
+        this._logger.log('setValue', root, value);
 
         root.patchValue(value, { onlySelf: true, emitEvent });
 
-        if (value.items) {
+        if (value.items || value.type == 'array') {
             if (!root.controls.items) {
                 this.setItems(root);
             }
 
-            root.controls.items?.patchValue(value.items, { onlySelf: true, emitEvent });
+            if (value.items && root.controls.items) {
+                this.setValue(root.controls.items, value.items)
+            }
         }
 
-        if (value.properties) {
+        if (value.properties?.length || value.type === 'object') {
             if (!root.controls.properties) {
                 this.setProperties(root);
             }
 
             const propertiesArrayForm = root.controls.properties!;
-            value.properties.forEach((propertyFormValue, idx) => {
+            value.properties?.forEach((propertyFormValue, idx) => {
                 let propertyForm = propertiesArrayForm.at(idx);
                 if (!propertyForm) {
                     propertyForm = this.addProperty(root);
@@ -62,43 +68,41 @@ export class JsonSchemaFormControllerService {
                 this.setValue(propertyForm.controls.value, propertyFormValue.value ?? {});
             });
 
-            if (value.properties.length) {
-                let shouldBeDeleted = propertiesArrayForm.controls.length - value.properties.length;
-                let pointer = -1;
+            let shouldBeDeleted = propertiesArrayForm.controls.length - (value.properties?.length ?? 0);
+            let pointer = -1;
 
-                while (shouldBeDeleted > 0) {
-                    // удаляем только валидные - если поле невалидно, то его,
-                    // возможно, не закончил редактировать пользователь, и ему
-                    // прилетело новое валидное состояние
-                    if (propertiesArrayForm.at(pointer).valid) {
-                        propertiesArrayForm.removeAt(pointer, { emitEvent });
-                    } else {
-                        pointer -= 1;
-                    }
-
-                    shouldBeDeleted -= 1;
+            while (shouldBeDeleted > 0) {
+                // удаляем только валидные - если поле невалидно, то его,
+                // возможно, не закончил редактировать пользователь, и ему
+                // прилетело новое валидное состояние
+                if (propertiesArrayForm.at(pointer).valid) {
+                    propertiesArrayForm.removeAt(pointer, { emitEvent });
+                } else {
+                    pointer -= 1;
                 }
+
+                shouldBeDeleted -= 1;
             }
         }
     }
 
     public handleTypeSet(type: CommonJsonTypes | null, root: JsonSchemaForm, emitEvent = false): void {
-        console.log('handleTypeSet', type, root);
+        this._logger.log('handleTypeSet', type, root);
 
         root.removeControl('items', { emitEvent });
         root.removeControl('properties', { emitEvent });
 
         if (type === 'array') {
-            this.setItems(root);
+            this.setItems(root, emitEvent);
         }
 
         if (type === 'object') {
-            this.setProperties(root);
+            this.setProperties(root, emitEvent);
         }
     }
 
     public addProperty(root: JsonSchemaForm, emitEvent = false): JsonSchemaPropertyForm {
-        console.log('addProperty', root);
+        this._logger.log('addProperty', root);
 
         if (!root.contains('properties')
             || root.value.type !== 'object'
@@ -120,7 +124,7 @@ export class JsonSchemaFormControllerService {
     public removeProperty(root: JsonSchemaForm, idx: number, emitEvent?: boolean): void
     public removeProperty(root: JsonSchemaForm, property: JsonSchemaPropertyForm, emitEvent?: boolean): void
     public removeProperty(root: JsonSchemaForm, idxOrProperty: number | JsonSchemaPropertyForm, emitEvent = false): void {
-        console.log('removeProperty', root, idxOrProperty);
+        this._logger.log('removeProperty', root, idxOrProperty);
 
         if (!root.contains('properties') || root.value.type !== 'object') {
             throw new Error('Could not remove property. Given root is not an object or does not contain property form');
@@ -142,7 +146,7 @@ export class JsonSchemaFormControllerService {
     }
 
     private createProperty(arrayOfPropertiesForm: FormArray<JsonSchemaPropertyForm>): JsonSchemaPropertyForm {
-        console.log('createProperty', arrayOfPropertiesForm);
+        this._logger.log('createProperty', arrayOfPropertiesForm);
 
         return new FormGroup({
             key: new FormControl<string | null>(
@@ -161,7 +165,7 @@ export class JsonSchemaFormControllerService {
     }
 
     private setItems(root: JsonSchemaForm, emitEvent = false): JsonSchemaForm {
-        console.log('setItems', root);
+        this._logger.log('setItems', root);
 
         if (root.value.type !== 'array') {
             throw new Error('Items are only available for array type');
@@ -169,14 +173,14 @@ export class JsonSchemaFormControllerService {
 
         const itemsForm = this.createRoot();
 
-        root.removeControl('items', { emitEvent });
+        root.removeControl('items', { emitEvent: false });
         root.setControl('items', itemsForm, { emitEvent });
 
         return itemsForm;
     }
 
     private setProperties(root: JsonSchemaForm, emitEvent = false): FormArray<JsonSchemaPropertyForm> {
-        console.log('setProperties', root);
+        this._logger.log('setProperties', root);
 
         if (root.value.type !== 'object') {
             throw new Error('Properties are only available for object type');
@@ -185,7 +189,7 @@ export class JsonSchemaFormControllerService {
         const propertiesForm = new FormArray<JsonSchemaPropertyForm>([]);
         propertiesForm.insert(0, this.createProperty(propertiesForm));
 
-        root.removeControl('properties', { emitEvent });
+        root.removeControl('properties', { emitEvent: false });
         root.setControl('properties', propertiesForm, { emitEvent });
 
         return propertiesForm;

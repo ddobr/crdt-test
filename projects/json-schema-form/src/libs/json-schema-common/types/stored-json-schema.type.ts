@@ -5,19 +5,19 @@ export interface IStoredJsonSchema {
     /** Тип схемы */
     type: CommonJsonTypes,
     /** Название схемы */
-    title?: string,
+    title?: string | null,
     /** Описание схемы */
-    description?: string,
+    description?: string | null,
     /** Обязательные дочерние поля. Для объекта */
     required?: string[]
     /** Схема элемента массива. Для массива */
-    items?: IStoredJsonSchema;
+    items?: IStoredJsonSchema | null;
     /**
      * Дочерние поля. Для объекта
      *
      * Массив кортежей { ключ, схемаПоля }
      */
-    properties?: IKeyed<IStoredJsonSchema>[];
+    properties?: IKeyed<IStoredJsonSchema>[] | null;
 }
 
 /** Кортеж */
