@@ -32,6 +32,10 @@ import { JsonSchemaFormModel } from '../../models/json-schema-form.model';
 })
 export class JsonSchemaComponent implements OnInit {
 
+    public get path(): string[] {
+        return this.form().getControlPath();
+    }
+
     public readonly form = input.required<JsonSchemaFormModel>();
     public readonly options: Signal<IOption<CommonJsonTypes>[]> = computed(() => this.form().typeOptions);
     public readonly showProperties: Signal<boolean>;
@@ -62,15 +66,14 @@ export class JsonSchemaComponent implements OnInit {
     }
 
     public ngOnInit(): void {
-        const path = this.form().getControlPath();
-        console.log(path);
+        console.log(this.path);
 
         this.form().titleVm.valueChanges.subscribe((v) => {
             this.crdtService.change((doc) => {
                 if (!v && v !== '') {
-                    delete this.getAt(doc, path).title;
+                    delete this.getAt(doc, this.path).title;
                 } else {
-                    this.getAt(doc, path).title = v;
+                    this.getAt(doc, this.path).title = v;
                 }
             });
         });
@@ -78,28 +81,28 @@ export class JsonSchemaComponent implements OnInit {
         this.form().descriptionVm.valueChanges.subscribe((v) => {
             this.crdtService.change((doc) => {
                 if (!v && v !== '') {
-                    delete this.getAt(doc, path).description
+                    delete this.getAt(doc, this.path).description
                 } else {
-                    this.getAt(doc, path).description = v;
+                    this.getAt(doc, this.path).description = v;
                 }
             });
         });
 
         this.form().typeVm.valueChanges.subscribe((v) => {
             this.crdtService.change((doc) => {
-                this.getAt(doc, path).type = v ?? 'string';
+                this.getAt(doc, this.path).type = v ?? 'string';
                 switch (v) {
                     case 'array':
-                        delete this.getAt(doc, path).properties;
-                        this.getAt(doc, path).items = { type: 'string' };
+                        delete this.getAt(doc, this.path).properties;
+                        this.getAt(doc, this.path).items = { type: 'string' };
                         break;
                     case 'object':
-                        delete this.getAt(doc, path).items;
-                        this.getAt(doc, path).properties = [];
+                        delete this.getAt(doc, this.path).items;
+                        this.getAt(doc, this.path).properties = [];
                         break;
                     default:
-                        delete this.getAt(doc, path).items;
-                        delete this.getAt(doc, path).properties;
+                        delete this.getAt(doc, this.path).items;
+                        delete this.getAt(doc, this.path).properties;
                 }
             });
         });
@@ -107,9 +110,9 @@ export class JsonSchemaComponent implements OnInit {
         this.form().propertiesVm.valueChanges.subscribe(event => {
             this.crdtService.change((doc) => {
                 if (event.type === 'add') {
-                    this.getAt(doc, path).properties?.push({ key: '', value: { type: 'string' }, required: false });
+                    this.getAt(doc, this.path).properties?.push({ key: '', value: { type: 'string' }, required: false });
                 } else {
-                    this.getAt(doc, path).properties?.splice(event.index, 1);
+                    this.getAt(doc, this.path).properties?.splice(event.index, 1);
                 }
             });
         });

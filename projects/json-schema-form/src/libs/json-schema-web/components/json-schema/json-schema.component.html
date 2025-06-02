@@ -24,7 +24,7 @@
 </div>
 
 <div class="schema-properties" *ngIf="showProperties() && form().propertiesVm as propertyListForm">
-    <ng-container *ngFor="let propertyForm of propertyListForm.children ?? []">
+    <ng-container *ngFor="let propertyForm of propertyListForm.children() ?? []">
         <app-json-schema-property [propertyForm]="propertyForm" [propertyListForm]="propertyListForm" />
     </ng-container>
 

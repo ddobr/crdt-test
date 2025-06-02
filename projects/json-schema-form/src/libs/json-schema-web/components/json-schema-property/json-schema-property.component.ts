@@ -29,6 +29,10 @@ import { JsonSchemaPropertyFormModel, JsonSchemaPropertyListFormModel } from "..
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class JsonSchemaPropertyComponent implements OnInit {
+    public get path(): string[] {
+        return this.propertyForm().getControlPath();
+    }
+
     public readonly propertyForm = input.required<JsonSchemaPropertyFormModel>();
     public readonly propertyListForm = input.required<JsonSchemaPropertyListFormModel>();
 
@@ -36,22 +40,21 @@ export class JsonSchemaPropertyComponent implements OnInit {
     protected readonly crdtService = inject(JsonSchemaCrdtService);
 
     public ngOnInit(): void {
-        const path = this.propertyForm().getControlPath();
-        console.log(path);
+        console.log(this.path);
 
         this.propertyForm().keyVm.valueChanges.subscribe((v) => {
             this.crdtService.change((doc) => {
                 if (!v && v !== '') {
-                    delete this.getAt(doc, path).key;
+                    delete this.getAt(doc, this.path).key;
                 } else {
-                    this.getAt(doc, path).key = v;
+                    this.getAt(doc, this.path).key = v;
                 }
             });
         });
 
         this.propertyForm().requiredVm.valueChanges.subscribe((v) => {
             this.crdtService.change((doc) => {
-                this.getAt(doc, path).required = v;
+                this.getAt(doc, this.path).required = v;
             });
         });
     }

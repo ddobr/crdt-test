@@ -4,6 +4,7 @@ import { FormControl, Validators } from "@angular/forms";
 import { JsonPathValidator } from "../validators/json-path.validator";
 import { JsonPathUniqueValidator } from "../validators/json-path-unique.validator";
 import { Observable, Subject, tap } from "rxjs";
+import { Signal, signal } from "@angular/core";
 
 interface ISchemaParent {
     getChildPath(child: ISchemaParent): string[];
@@ -146,7 +147,7 @@ export class JsonSchemaPropertyFormModel implements ISchemaParent {
 
     constructor(private readonly _parent: JsonSchemaPropertyListFormModel) {
         this.keyVm.addValidators(
-            JsonPathUniqueValidator(() => this._parent.children.map(child => child.keyVm)),
+            JsonPathUniqueValidator(() => this._parent.children().map(child => child.keyVm)),
         );
     }
 
@@ -187,20 +188,19 @@ export interface PropertyRemovedEvent {
 
 export class JsonSchemaPropertyListFormModel implements ISchemaParent {
 
-    public get children(): readonly JsonSchemaPropertyFormModel[] {
-        return this._children;
-    }
+    public readonly children: Signal<readonly JsonSchemaPropertyFormModel[]>;
     public readonly valueChanges: Observable<PropertyAddedEvent | PropertyRemovedEvent>
 
     private readonly _valueChanges = new Subject<PropertyAddedEvent | PropertyRemovedEvent>();
-    private readonly _children: JsonSchemaPropertyFormModel[] = [];
+    private readonly _children = signal<JsonSchemaPropertyFormModel[]>([]);
 
     constructor(private readonly _parent: ISchemaParent) {
+        this.children = this._children.asReadonly();
         this.valueChanges = this._valueChanges.asObservable();
     }
 
     public getChildPath(child: JsonSchemaPropertyFormModel): string[] {
-        const indexOfChild = this._children.indexOf(child);
+        const indexOfChild = this._children().indexOf(child);
         if (indexOfChild < 0) {
             throw new Error('Unknown child');
         }
@@ -212,7 +212,7 @@ export class JsonSchemaPropertyListFormModel implements ISchemaParent {
     }
 
     public getValue(): IKeyed[] {
-        return this.children.map(child => child.getValue());
+        return this.children().map(child => child.getValue());
     }
 
     public addProperty(): void {
@@ -223,12 +223,14 @@ export class JsonSchemaPropertyListFormModel implements ISchemaParent {
     }
 
     public deleteProperty(property: JsonSchemaPropertyFormModel): void {
-        const indexOfChild = this._children.indexOf(property);
+        const indexOfChild = this._children().indexOf(property);
         if (indexOfChild < 0) {
             throw new Error('Unknown property');
         }
 
-        this._children.splice(indexOfChild, 1);
+        this._children().splice(indexOfChild, 1);
+        this._children.set([...this._children()]);
+
         this._valueChanges.next({
             type: 'removed',
             index: indexOfChild
@@ -237,7 +239,7 @@ export class JsonSchemaPropertyListFormModel implements ISchemaParent {
 
     public setValue(value: IKeyed[]): void {
         value.forEach((propertyValue, idx) => {
-            let propertyForm = this._children[idx];
+            let propertyForm = this._children()[idx];
             if (!propertyForm) {
                 propertyForm = this.addPropertyBase();
             }
@@ -245,15 +247,17 @@ export class JsonSchemaPropertyListFormModel implements ISchemaParent {
             propertyForm.setValue(propertyValue);
         });
 
-        const shouldBeDeleted = this._children.length - value.length;
+        const shouldBeDeleted = this._children().length - value.length;
         if (shouldBeDeleted > 0) {
-            this._children.splice(-shouldBeDeleted, shouldBeDeleted);
+            this._children().splice(-shouldBeDeleted, shouldBeDeleted);
+            this._children.set([...this._children()]);
         }
     }
 
     private addPropertyBase(): JsonSchemaPropertyFormModel {
         const property = new JsonSchemaPropertyFormModel(this);
-        this._children.push(property);
+        this._children().push(property);
+        this._children.set([...this._children()]);
 
         return property;
     }
