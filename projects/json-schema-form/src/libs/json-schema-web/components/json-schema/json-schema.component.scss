@@ -99,31 +99,15 @@
 
     margin-top: 10px;
 
-    & > :first-child {
-        height: 56px;
-    }
-
     &::before {
         content: "";
         position: absolute;
         width: 2px;
         left: 12px;
-        top: calc(-1 * var(--nester-space));
-        bottom: 0px;
+        height: calc(28px + var(--nester-space));
+        bottom: calc(100% - 28px);
 
         background: grey;
-    }
-    &:first-of-type {
-        &::before {
-            top: calc(-1 * var(--nester-space));
-        }
-    }
-    &:last-of-type {
-        &::before {
-            height: calc(28px + var(--nester-space));
-            top: unset;
-            bottom: calc(100% - 28px);
-        }
     }
 }
 

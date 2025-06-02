@@ -7,19 +7,24 @@
 
 .inlet {
     position: absolute;
-    width: 50%;
-    height: 2px;
+
     top: calc(50% - 1px);
     right: 0;
-    background: grey;
 
-    &::before {
-        content: "";
-        position: absolute;
-        width: 2px;
-        height: 4px;
-        left: 0;
-        top: calc(50% - 4px);
-        background: grey;
-    }
+    width: 50%;
+    height: 2px;
+
+    background: grey;
+}
+
+.leveler {
+    position: absolute;
+
+    top: 0;
+    left: 50%;
+
+    width: 2px;
+    height: 50%;
+
+    background: grey;
 }

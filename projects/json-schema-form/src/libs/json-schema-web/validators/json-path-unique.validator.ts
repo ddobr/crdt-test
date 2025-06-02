@@ -1,10 +1,8 @@
-import { AbstractControl, FormArray, ValidatorFn } from "@angular/forms";
-import { JsonSchemaPropertyForm } from "../types/json-schema-form.type";
+import { AbstractControl, FormControl, ValidatorFn } from "@angular/forms";
 
-export const JsonPathUniqueValidator = (propertiesArrayForm: FormArray<JsonSchemaPropertyForm>): ValidatorFn => {
+export const JsonPathUniqueValidator = (getAlike: () => FormControl<string | null>[]): ValidatorFn => {
     return (control: AbstractControl) => {
-        const isUniqueValue = propertiesArrayForm.controls
-            .map(propertyForm => propertyForm.controls.key)
+        const isUniqueValue = getAlike()
             .filter(keyControl => keyControl !== control)
             .every(keyControl => keyControl.value !== control.value);
 

@@ -4,6 +4,7 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { Observable, ReplaySubject } from "rxjs";
 import { IStoredJsonSchema } from "../types/stored-json-schema.type";
 import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket';
+import { defaultValue } from "../utils/stored-json-schema.utils";
 
 
 export class JsonSchemaCrdtService {
@@ -42,7 +43,7 @@ export class JsonSchemaCrdtService {
         if (isValidAutomergeUrl(docId)) {
             this._handle = this._repo.find(docId);
         } else {
-            this._handle = this._repo.create<IStoredJsonSchema>({ type: 'string' });
+            this._handle = this._repo.create<IStoredJsonSchema>(defaultValue());
         }
 
         this._handle.doc().then(this.handleLoad);
@@ -66,7 +67,7 @@ export class JsonSchemaCrdtService {
      * @param doc
      */
     private handleLoad = (doc: Doc<IStoredJsonSchema> | undefined) => {
-        this._syncEvent.next(doc ?? { type: 'string' });
+        this._syncEvent.next(doc ?? defaultValue());
     }
 
     /**
@@ -74,6 +75,7 @@ export class JsonSchemaCrdtService {
      * @param doc
      */
     private handleChange = (event: DocHandleChangePayload<IStoredJsonSchema>) => {
+        event.patchInfo
         this._syncEvent.next(event.doc);
     }
 }

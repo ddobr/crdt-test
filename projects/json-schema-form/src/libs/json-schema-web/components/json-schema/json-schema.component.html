@@ -1,8 +1,8 @@
 <div class="schema-controls">
-    <app-select class="schema-controls__type" [icon]="typeIconTemplate" [options]="options"
-        [formControl]="form().controls.type" (valueChange)="handleTypeChanged($event)" label="Type"></app-select>
-    <app-input class="schema-controls__title" [control]="form().controls.title" placeholder="Title"></app-input>
-    <app-input class="schema-controls__description" [control]="form().controls.description"
+    <app-select class="schema-controls__type" [icon]="typeIconTemplate" [options]="options()"
+        [formControl]="form().typeVm" label="Type"></app-select>
+    <app-input class="schema-controls__title" [control]="form().titleVm" placeholder="Title"></app-input>
+    <app-input class="schema-controls__description" [control]="form().descriptionVm"
         placeholder="Description"></app-input>
 
 
@@ -23,23 +23,9 @@
     </div>
 </div>
 
-<div class="schema-properties" *ngIf="showProperties()">
-    <ng-container *ngFor="let propertyForm of form().controls.properties?.controls ?? []">
-        <div class="nester">
-            <app-branch></app-branch>
-            <app-json-schema [form]="propertyForm.controls.value">
-                <ng-container ngProjectAs="header-end">
-                    <button type="button" mat-fab aria-label="Delete property" (click)="deleteProperty(propertyForm)">
-                        <mat-icon>delete</mat-icon>
-                    </button>
-                </ng-container>
-
-                <div class="property-controls" ngProjectAs="after-header">
-                    <mat-checkbox [formControl]="propertyForm.controls.required">Required</mat-checkbox>
-                    <app-input [control]="propertyForm.controls.key" placeholder="Property key"></app-input>
-                </div>
-            </app-json-schema>
-        </div>
+<div class="schema-properties" *ngIf="showProperties() && form().propertiesVm as propertyListForm">
+    <ng-container *ngFor="let propertyForm of propertyListForm.children ?? []">
+        <app-json-schema-property [propertyForm]="propertyForm" [propertyListForm]="propertyListForm" />
     </ng-container>
 
     <div class="nester add-property-btn">
@@ -54,6 +40,6 @@
 <div class="schema-items" *ngIf="showItems()">
     <div class="nester">
         <app-branch></app-branch>
-        <app-json-schema *ngIf="form().controls.items as items" [form]="items"></app-json-schema>
+        <app-json-schema *ngIf="form().itemsVm as items" [form]="items"></app-json-schema>
     </div>
 </div>

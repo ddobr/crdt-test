@@ -6,14 +6,12 @@ import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { JsonSchemaComponent } from "../json-schema/json-schema.component";
 import { JsonSchemaCrdtService, LoggingService } from "json-schema-common";
 import { tap } from "rxjs";
-import { JsonSchemaFormControllerService } from "../../services/json-schema-form-controller.service";
-import { FormValueParser } from "../../utils/form-value-parser.util";
+import { JsonSchemaFormModel } from "../../models/json-schema-form.model";
 
 @Component({
     standalone: true,
     selector: 'app-json-schema-root',
     providers: [
-        JsonSchemaFormControllerService,
         JsonSchemaCrdtService,
     ],
     imports: [
@@ -25,8 +23,7 @@ import { FormValueParser } from "../../utils/form-value-parser.util";
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class JsonSchemaRootComponent {
-    public readonly controller = inject(JsonSchemaFormControllerService);
-    public readonly formRoot = this.controller.createRoot();
+    public readonly formRoot = new JsonSchemaFormModel();
 
     private readonly _crdtService = inject(JsonSchemaCrdtService);
     private readonly _destroyRef = inject(DestroyRef);
@@ -35,55 +32,38 @@ export class JsonSchemaRootComponent {
     constructor() {
         this._logger.enabled = false;
 
-        const formValueParser = new FormValueParser();
 
         this._crdtService.syncEvent.pipe(
             tap(doc => {
-                const formValue = formValueParser.getFormValue(doc);
-                this.controller.setValue(this.formRoot, formValue)
+                this.formRoot.setValue(doc);
             }),
             takeUntilDestroyed(this._destroyRef),
         ).subscribe();
 
-        // this.formRoot.valueChanges.pipe(
-        //     tap(formValue => {
-        //         const storedValue = formValueParser.getStoredValue(formValue);
-        //         this._crdtService.change((doc) => Object.assign(doc, storedValue));
-        //     }),
-        //     takeUntilDestroyed(this._destroyRef),
-        // ).subscribe();
 
         const rootDocUrl = document.location.hash.substring(1);
         document.location.hash = this._crdtService.initialize(rootDocUrl);
+
+        this.test();
     }
 
     public test(): void {
         let doc = Automerge.from<any>({
-            title: '',
+            title: {
+                value: ''
+            },
             description: ''
         });
         let doc1 = Automerge.change(Automerge.clone(doc), (m) => {
-            // m.properties.push({
-            //     title: 'hey'
-            // });
-            Object.assign(m, {
-                title: 'hello',
-                description: ''
-            });
-
+            m.title = '!!';
         });
 
         let doc2 = Automerge.change(Automerge.clone(doc), (m) => {
-            // m.properties.push({
-            //     title: 'hey2'
-            // });
-            // Object.assign(m, { properties: [{ title: 'hey2' }] });
-            Object.assign(m, {
-                title: '',
-                description: 'world'
-            });
+            m.title = '!!';
         });
 
-        console.log(Automerge.merge(doc1, doc2));
+        // console.log(Automerge.merge(doc1, doc2));
+        console.log(Automerge.getConflicts(Automerge.merge(doc1, doc2), 'title'));
+
     }
 }

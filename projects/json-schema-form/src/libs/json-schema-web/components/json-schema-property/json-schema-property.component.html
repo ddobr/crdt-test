@@ -1,0 +1,13 @@
+<app-branch></app-branch>
+<app-json-schema [form]="propertyForm().valueVm">
+    <ng-container ngProjectAs="header-end">
+        <button type="button" mat-fab aria-label="Delete property" (click)="deleteProperty()">
+            <mat-icon>delete</mat-icon>
+        </button>
+    </ng-container>
+
+    <div class="property-controls" ngProjectAs="after-header">
+        <mat-checkbox [formControl]="propertyForm().requiredVm">Required</mat-checkbox>
+        <app-input [control]="propertyForm().keyVm" placeholder="Property key"></app-input>
+    </div>
+</app-json-schema>

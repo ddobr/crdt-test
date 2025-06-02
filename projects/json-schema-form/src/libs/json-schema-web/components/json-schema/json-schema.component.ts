@@ -1,17 +1,16 @@
-import { ChangeDetectionStrategy, Component, inject, input, OnInit, Signal } from '@angular/core';
-import { FormArray, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, forwardRef, inject, input, OnInit, Signal } from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
 import { AppSelectComponent, IOption } from 'select';
-import { CommonJsonTypes, IKeyed, IStoredJsonSchema, JsonSchemaCrdtService } from 'json-schema-common';
-import { JsonSchemaForm, JsonSchemaPropertyForm } from '../../types/json-schema-form.type';
-import { JsonSchemaFormControllerService } from '../../services/json-schema-form-controller.service';
+import { CommonJsonTypes, IStoredJsonSchema, JsonSchemaCrdtService } from 'json-schema-common';
 import { AppInputComponent } from 'input';
 import { CommonModule } from '@angular/common';
 import { BranchComponent } from '../branch/branch.component';
 import { MatIcon } from '@angular/material/icon';
 import { MatFabButton } from '@angular/material/button';
-import { MatCheckbox } from '@angular/material/checkbox';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { map, switchMap } from 'rxjs';
+import { JsonSchemaPropertyComponent } from '../json-schema-property/json-schema-property.component';
+import { JsonSchemaFormModel } from '../../models/json-schema-form.model';
 
 
 @Component({
@@ -25,7 +24,7 @@ import { map, switchMap } from 'rxjs';
         BranchComponent,
         MatIcon,
         MatFabButton,
-        MatCheckbox
+        forwardRef(() => JsonSchemaPropertyComponent),
     ],
     styleUrls: ['./json-schema.component.scss'],
     templateUrl: './json-schema.component.html',
@@ -33,21 +32,24 @@ import { map, switchMap } from 'rxjs';
 })
 export class JsonSchemaComponent implements OnInit {
 
-    public readonly form = input.required<JsonSchemaForm>();
-    public readonly options: IOption<CommonJsonTypes>[];
+    public readonly form = input.required<JsonSchemaFormModel>();
+    public readonly options: Signal<IOption<CommonJsonTypes>[]> = computed(() => this.form().typeOptions);
     public readonly showProperties: Signal<boolean>;
     public readonly showItems: Signal<boolean>;
 
-    protected readonly formController = inject(JsonSchemaFormControllerService);
     protected readonly crdtService = inject(JsonSchemaCrdtService);
 
     constructor() {
-        this.options = this.formController.typeOptions;
-
+        /** Выбранный type у JSON схемы */
         const schemaType = toObservable(this.form).pipe(
-            switchMap((form) => this.crdtService.syncEvent.pipe(map(() => form))),
-            map(form => form.value),
-            map(value => value.type ?? 'string')
+            switchMap((form) => {
+                return this.crdtService.syncEvent.pipe(
+                    map(() => {
+                        return form;
+                    })
+                );
+            }),
+            map(form => form.typeVm.value ?? 'string'),
         );
 
         this.showProperties = toSignal(schemaType.pipe(
@@ -60,63 +62,61 @@ export class JsonSchemaComponent implements OnInit {
     }
 
     public ngOnInit(): void {
-        const path = this.getPath(this.form());
+        const path = this.form().getControlPath();
         console.log(path);
 
-        this.form().controls.title.valueChanges.subscribe((v) => {
+        this.form().titleVm.valueChanges.subscribe((v) => {
             this.crdtService.change((doc) => {
-                this.getAt(doc, path).title = v;
+                if (!v && v !== '') {
+                    delete this.getAt(doc, path).title;
+                } else {
+                    this.getAt(doc, path).title = v;
+                }
             });
         });
 
-        this.form().controls.description.valueChanges.subscribe((v) => {
+        this.form().descriptionVm.valueChanges.subscribe((v) => {
             this.crdtService.change((doc) => {
-                this.getAt(doc, path).description = v;
+                if (!v && v !== '') {
+                    delete this.getAt(doc, path).description
+                } else {
+                    this.getAt(doc, path).description = v;
+                }
             });
         });
-    }
 
-    public deleteProperty(property: JsonSchemaPropertyForm): void {
+        this.form().typeVm.valueChanges.subscribe((v) => {
+            this.crdtService.change((doc) => {
+                this.getAt(doc, path).type = v ?? 'string';
+                switch (v) {
+                    case 'array':
+                        delete this.getAt(doc, path).properties;
+                        this.getAt(doc, path).items = { type: 'string' };
+                        break;
+                    case 'object':
+                        delete this.getAt(doc, path).items;
+                        this.getAt(doc, path).properties = [];
+                        break;
+                    default:
+                        delete this.getAt(doc, path).items;
+                        delete this.getAt(doc, path).properties;
+                }
+            });
+        });
 
-        this.formController.removeProperty(this.form(), property, true);
+        this.form().propertiesVm.valueChanges.subscribe(event => {
+            this.crdtService.change((doc) => {
+                if (event.type === 'add') {
+                    this.getAt(doc, path).properties?.push({ key: '', value: { type: 'string' }, required: false });
+                } else {
+                    this.getAt(doc, path).properties?.splice(event.index, 1);
+                }
+            });
+        });
     }
 
     public addProperty(): void {
-        this.formController.addProperty(this.form());
-    }
-
-    public handleTypeChanged(type: CommonJsonTypes | null): void {
-        this.formController.handleTypeSet(type, this.form(), false);
-    }
-
-    private getPath(schema: JsonSchemaForm): string[] {
-        const result: string[] = [];
-        while (schema.parent) {
-            const parent = schema.parent;
-            if (!(parent instanceof FormGroup)) {
-                throw new Error('Schema is in array');
-            } else if (parent.controls['items'] === schema) {
-                result.unshift('items');
-                schema = parent;
-            } else if (parent.controls['value'] === schema) {
-                const properties = parent.parent;
-                if (!(properties instanceof FormArray)) {
-                    throw new Error('Property is in group');
-                }
-
-                const indexOfProperty = properties.controls.indexOf(parent);
-                result.unshift('value');
-                result.unshift(indexOfProperty.toString());
-                result.unshift('properties');
-
-                if (!(properties.parent instanceof FormGroup)) {
-                    throw new Error('Properties is in array')
-                }
-
-                schema = properties.parent;
-            }
-        }
-        return result;
+        this.form().propertiesVm?.addProperty();
     }
 
     private getAt(doc: IStoredJsonSchema, path: string[]): IStoredJsonSchema {
